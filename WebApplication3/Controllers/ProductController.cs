@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WebApplication3.Models;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using WebApplication3.Abstaction;
+using WebApplication3.Models.DTO;
 
 namespace WebApplication3.Controllers
 {
@@ -8,136 +12,69 @@ namespace WebApplication3.Controllers
     [Route("[controller]")]
     public class ProductController : ControllerBase
     {
-        [HttpGet]
+        private readonly IProductRepository _productRepository;
+
+        public ProductController(IProductRepository productRepository)
+        {
+            _productRepository = productRepository;
+        }
+
+        // Метод для возврата статистики кэша
+        [HttpGet("GetCacheStats")]
+        public ActionResult GetCacheStats()
+        {
+            var info = _productRepository.GetCacheStatistics();
+            string file = "statistics.txt";
+            System.IO.File.WriteAllText(file, info.ToString());
+            return PhysicalFile(file, "text/plain");
+        }
+
+        [HttpGet("getProducts")]
         public IActionResult GetProducts()
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    var products = context.Products.Select(x => new Product()
-                    {
-                        Id = x.Id,
-                        Name = x.Name,
-                        Description = x.Description
-                    });
-                    return Ok(products);
-                }
-            }
-            catch
-            {
-                return StatusCode(500);
-            }
+            var products = _productRepository.GetProducts();
+            return Ok(products);
         }
 
-        [HttpPut("putProduct")]
-        public IActionResult PutProducts([FromQuery] string name, string description, int id, int cost)
+        [HttpPut("addProduct")]
+        public IActionResult AddProduct([FromBody] ProductDTO productDTO)
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    if (!context.Products.Any(x => x.Name.ToLower().Equals(name)))
-                    {
-                        context.Add(new Product()
-                        {
-                            Name = name,
-                            Description = description,
-                            Cost = cost,
-                            CategoryId = id
-                        });
-                        context.SaveChanges();
-                        return Ok(new Responce { Status = true, Message = "The product added successful" });
-                    }
-                    else
-                    {
-                        return StatusCode(409);
-                    }
-
-                }
-            }
-            catch
-            {
-                return StatusCode(500);
-            }
+            var result = _productRepository.AddProduct(productDTO);
+            return Ok(result);
         }
 
-
-        [HttpPatch("updateProductPrice")]
-        public IActionResult UpdateProductPrice([FromQuery] int id, [FromQuery] int newCost)
+        [HttpGet("getCategory")]
+        public IActionResult GetCategory()
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    var product = context.Products.Find(id);
-                    if (product == null)
-                    {
-                        return NotFound(new Responce { Status = false, Message = "Product not found." });
-                    }
-
-                    product.Cost = newCost;
-                    context.SaveChanges();
-
-                    return Ok(new Responce { Status = true, Message = "Price updated successfull." });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500);
-            }
+            var categories = _productRepository.GetCategories();
+            return Ok(categories);
         }
 
-        [HttpDelete("deleteProduct")]
-        public IActionResult DeleteProduct([FromQuery] int id)
+        [HttpPut("addCategory")]
+        public IActionResult AddCategory([FromBody] CategoryDTO categoryDTO)
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    var product = context.Products.Find(id);
-                    if (product == null)
-                    {
-                        return NotFound(new Responce { Status = false, Message = "Product did'nt found." });
-                    }
-
-                    context.Products.Remove(product);
-                    context.SaveChanges();
-
-                    return Ok(new Responce { Status = true, Message = "Product deleted successfull." });
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500);
-            }
+            var result = _productRepository.AddCategory(categoryDTO);
+            return Ok(result);
         }
 
-        [HttpDelete("deleteCategory")]
-        public IActionResult DeleteCategory([FromQuery] int id)
+        // Метод для возврата товаров в формате CSV
+        [HttpGet("GetProductsCsv")]
+        public FileContentResult GetProductsCsv()
         {
-            try
-            {
-                using (var context = new ProductContext())
-                {
-                    var category = context.Categories.Find(id);
-                    if (category == null)
-                    {
-                        return NotFound(new Responce { Status = false, Message = "Category did'nt found." });
-                    }
+            var products = _productRepository.GetProducts().ToList();
+            var content = GetCsv(products);
+            var fileContent = Encoding.UTF8.GetBytes(content);
+            return File(fileContent, "text/csv", "products.csv");
+        }
 
-                    context.Categories.Remove(category);
-                    context.SaveChanges();
-
-                    return Ok(new Responce { Status = true, Message = "Category deleted successfull." });
-                }
-            }
-            catch (Exception ex)
+        private string GetCsv(IEnumerable<ProductDTO> products)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var product in products)
             {
-                return StatusCode(500);
+                sb.AppendLine($"{product.Id};{product.Name};{product.Description}");
             }
+            return sb.ToString();
         }
     }
 }
-
-

@@ -1,4 +1,10 @@
 
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using WebApplication3.Abstaction;
+using WebApplication3.Models;
+using WebApplication3.Repo;
+
 namespace WebApplication3
 {
     public class Program
@@ -7,12 +13,38 @@ namespace WebApplication3
         {
             var builder = WebApplication.CreateBuilder(args);
 
+
+
             // Add services to the container.
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            builder.Services.AddAutoMapper(typeof(MappingProFile));
+
+            builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+            //builder.Host.ConfigureContainer<ContainerBuilder>(x => 
+            //x.RegisterType<ProductRepository>().As<IProductRepository>());
+
+            builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
+            {
+                containerBuilder.Register(c =>
+                    new ProductContext(builder.Configuration.GetConnectionString("ProductDatabase")))
+                    .AsSelf()
+                    .InstancePerLifetimeScope();
+
+                containerBuilder.RegisterType<ProductRepository>()
+                    .As<IProductRepository>()
+                    .InstancePerLifetimeScope();
+            });
+
+            //builder.Services.AddSingleton<IProductRepository,ProductRepository>();
+
+            builder.Services.AddMemoryCache(mc => 
+            mc.TrackStatistics = true);
 
             var app = builder.Build();
 

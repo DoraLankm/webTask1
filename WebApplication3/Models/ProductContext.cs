@@ -5,18 +5,29 @@ namespace WebApplication3.Models
 {
     public class ProductContext : DbContext
     {
-       
+        private string _connectionString;
 
-        public DbSet<ProductStorage> ProductStorages { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Storage> Storages { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+
+        public ProductContext(string connectionString)
         {
-            optionsBuilder.UseLazyLoadingProxies().UseNpgsql("Host=localhost;Username=postgres;Password=example;Database=Product");
+            _connectionString = connectionString;
         }
 
+        public ProductContext()
+        {
+            _connectionString = "Host=localhost;Username=postgres;Password=example;Database=postgres";
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseLazyLoadingProxies().UseNpgsql(_connectionString);
+        }
+
+       
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,21 +59,14 @@ namespace WebApplication3.Models
                 // Настройка для свойства Cost (цена)
                 entity.Property(e => e.Cost)
                     .HasColumnName("Cost")            // Имя колонки в базе данных
-                    .IsRequired();                    // Поле обязательно для заполнения
+                    .IsRequired();      // Поле обязательно для заполнения
+                
 
                 // Настройка связи с сущностью Category (многие к одному)
                 entity.HasOne(x => x.Category)         // Один продукт связан с одной категорией
-                    .WithMany(c => c.Products)         // Одна категория может содержать много продуктов
-                    .HasForeignKey(x => x.CategoryId)  // Связываем по полю CategoryId (внешний ключ)
-                    .HasConstraintName("FK_Product_Category")  // Устанавливаем имя ограничения для внешнего ключа
-                    .OnDelete(DeleteBehavior.Cascade); // Каскадное удаление — если удаляем категорию, удаляются все связанные продукты
+                    .WithMany(c => c.Products);         // Одна категория может содержать много продуктов
 
-                // Связь с сущностью ProductStorage (один ко многим)
-                entity.HasMany(p => p.ProductStorage)
-                    .WithOne(ps => ps.Product)         // Один ProductStorage связан с одним продуктом
-                    .HasForeignKey(ps => ps.ProductId) // Связываем по полю ProductId
-                    .HasConstraintName("FK_Product_ProductStorage")
-                    .OnDelete(DeleteBehavior.Cascade); // Каскадное удаление ProductStorage при удалении продукта
+                
             });
 
             modelBuilder.Entity<Category>(entity =>
@@ -74,7 +78,7 @@ namespace WebApplication3.Models
                 entity.HasKey(x => x.Id).HasName("PK_Category");
 
                 // Создаём уникальный индекс на поле Name
-                entity.HasIndex(x => x.Name).IsUnique().HasDatabaseName("IX_Category_Name");
+                entity.HasIndex(x => x.Name).IsUnique().HasDatabaseName("Category_Name");
 
                 // Настройка для свойства Name
                 entity.Property(e => e.Name)
@@ -110,27 +114,10 @@ namespace WebApplication3.Models
                     .IsRequired();                     // Поле обязательно для заполнения
 
                 // Связь "один к одному" с Product
-                entity.HasOne(s => s.Product)          // Один склад имеет один продукт
-                    .WithOne()                         // Продукт связан с одним складом
-                    .HasForeignKey<Storage>(s => s.ProductId)  // Связываем по полю ProductId
-                    .HasConstraintName("FK_Storage_Product")   // Устанавливаем имя ограничения для внешнего ключа
-                    .OnDelete(DeleteBehavior.Cascade); // Каскадное удаление — если удаляем продукт, удаляется и склад
+                entity.HasOne(s => s.Product)
+                    .WithMany(p => p.Storages);
+
             });
-
-            modelBuilder.Entity<ProductStorage>(entity =>
-            {
-                entity.HasKey(e => new { e.ProductId, e.StorageId }); 
-
-                entity.HasOne(e => e.Product)
-                      .WithMany(p => p.ProductStorage)
-                      .HasForeignKey(e => e.ProductId);
-
-                entity.HasOne(e => e.Storage)
-                      .WithMany(s => s.ProductStorage)
-                      .HasForeignKey(e => e.StorageId);
-            });
-
-
         }
     }
 }
