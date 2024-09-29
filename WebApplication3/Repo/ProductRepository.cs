@@ -11,30 +11,27 @@ namespace WebApplication3.Repo
     {
         private readonly IMapper _mapper;
         private readonly IMemoryCache _memoryCache;
-        public ProductRepository(IMapper mapper, IMemoryCache memoryCache)
+        private readonly ProductContext _context;
+        public ProductRepository(IMapper mapper, IMemoryCache memoryCache, ProductContext context)
         {
             _mapper = mapper;
             _memoryCache = memoryCache;
+            _context = context;
         }
         public int AddCategory(CategoryDTO category)
         {
-            
-            using (var context = new ProductContext())
+            var group = _context.Categories.FirstOrDefault(x => x.Name.ToLower() == category.Name.ToLower());
+            if (group == null)
             {
-                var group = context.Categories.FirstOrDefault(x => x.Name.ToLower() == category.Name.ToLower());
-                if (group == null)
-                {
-                    group = _mapper.Map<Category>(category);
-                    context.Categories.Add(group);
-                    context.SaveChanges();
-                    _memoryCache.Remove("categories");
-                }
-              
-                
-                return group.Id;
+                group = _mapper.Map<Category>(category);
+                _context.Categories.Add(group);
+                _context.SaveChanges();
+                _memoryCache.Remove("categories");
             }
 
-            
+
+            return group.Id;
+
         }
 
         public MemoryCacheStatistics GetCacheStatistics()
@@ -45,19 +42,16 @@ namespace WebApplication3.Repo
 
         public int AddProduct(ProductDTO product)
         {
-            using (var context = new ProductContext())
-            {
-                var product_entity = context.Products.FirstOrDefault(x => x.Name.ToLower() == product.Name.ToLower());
+            var product_entity = _context.Products.FirstOrDefault(x => x.Name.ToLower() == product.Name.ToLower());
                 if (product_entity == null)
                 {
                     product_entity = _mapper.Map<Product>(product);
-                    context.Products.Add(product_entity);
-                    context.SaveChanges();
+                    _context.Products.Add(product_entity);
+                    _context.SaveChanges();
                     _memoryCache.Remove("products");
                 }
                 
                 return product_entity.Id;
-            }
 
             
         }
@@ -68,12 +62,9 @@ namespace WebApplication3.Repo
             {
                 return categories;
             }
-            using (var context = new ProductContext())
-            {
-                var categoriesList = context.Categories.Select(x => _mapper.Map<CategoryDTO>(x)).ToList();
-                _memoryCache.Set("categories",categoriesList, TimeSpan.FromMinutes(30));
-                return categoriesList;
-            }
+            var categoriesList = _context.Categories.Select(x => _mapper.Map<CategoryDTO>(x)).ToList();
+            _memoryCache.Set("categories", categoriesList, TimeSpan.FromMinutes(30));
+            return categoriesList;
 
         }
 
@@ -83,11 +74,9 @@ namespace WebApplication3.Repo
             {
                 return products;
             }
-            using (var context = new ProductContext())
-            {
-                var productsList = context.Products.Select(x => _mapper.Map<ProductDTO>(x)).ToList();
-                return productsList;
-            }
+            var productsList = _context.Products.Select(x => _mapper.Map<ProductDTO>(x)).ToList();
+            _memoryCache.Set("products", productsList, TimeSpan.FromMinutes(30));
+            return productsList;
         }
     }
 }

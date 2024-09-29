@@ -5,29 +5,19 @@ namespace WebApplication3.Models
 {
     public class ProductContext : DbContext
     {
-        private string _connectionString;
 
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Storage> Storages { get; set; }
 
 
-        public ProductContext(string connectionString)
+        public ProductContext(DbContextOptions<ProductContext> options)
+           : base(options)
         {
-            _connectionString = connectionString;
         }
 
-        public ProductContext()
-        {
-            _connectionString = "Host=localhost;Username=postgres;Password=example;Database=postgres";
-        }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseLazyLoadingProxies().UseNpgsql(_connectionString);
-        }
 
-       
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -36,7 +26,9 @@ namespace WebApplication3.Models
             modelBuilder.Entity<Product>(entity =>
             {
                 // Указываем имя таблицы для сущности Product
-                entity.ToTable("Products");
+                entity.ToTable("Products")
+                .HasIndex(p => new { p.Name, p.CategoryId })
+                .IsUnique();
 
                 // Настраиваем первичный ключ
                 entity.HasKey(x => x.Id).HasName("Product_ID");

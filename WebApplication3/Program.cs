@@ -1,6 +1,7 @@
 
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using WebApplication3.Abstaction;
 using WebApplication3.Models;
 using WebApplication3.Repo;
@@ -13,8 +14,6 @@ namespace WebApplication3
         {
             var builder = WebApplication.CreateBuilder(args);
 
-
-
             // Add services to the container.
 
             builder.Services.AddControllers();
@@ -24,6 +23,9 @@ namespace WebApplication3
 
             builder.Services.AddAutoMapper(typeof(MappingProFile));
 
+            builder.Services.AddDbContext<ProductContext>(options =>
+            options.UseLazyLoadingProxies().UseNpgsql(builder.Configuration.GetConnectionString("ProductDatabase")));
+
             builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 
             //builder.Host.ConfigureContainer<ContainerBuilder>(x => 
@@ -31,14 +33,9 @@ namespace WebApplication3
 
             builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
             {
-                containerBuilder.Register(c =>
-                    new ProductContext(builder.Configuration.GetConnectionString("ProductDatabase")))
-                    .AsSelf()
-                    .InstancePerLifetimeScope();
-
                 containerBuilder.RegisterType<ProductRepository>()
-                    .As<IProductRepository>()
-                    .InstancePerLifetimeScope();
+                .As<IProductRepository>()
+                .InstancePerLifetimeScope();
             });
 
             //builder.Services.AddSingleton<IProductRepository,ProductRepository>();

@@ -24,8 +24,16 @@ namespace WebApplication3.Controllers
         public ActionResult GetCacheStats()
         {
             var info = _productRepository.GetCacheStatistics();
-            string file = "statistics.txt";
-            System.IO.File.WriteAllText(file, info.ToString());
+            string text = $"Current Entry Count: {info.CurrentEntryCount}\n" +
+                        $"Current Estimated Size: {info.CurrentEstimatedSize}\n" +
+                        $"Total Hits: {info.TotalHits}\n" +
+                        $"Total Misses: {info.TotalMisses}\n";
+            string file = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "statistics.txt"); ;
+            if (!System.IO.File.Exists(file))
+            {
+                return NotFound("Statistics file not found");
+            }
+            System.IO.File.WriteAllText(file, text);
             return PhysicalFile(file, "text/plain");
         }
 

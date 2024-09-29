@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace WebApplication3.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,7 +32,7 @@ namespace WebApplication3.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Cost = table.Column<int>(type: "integer", nullable: false),
-                    CategoryId = table.Column<int>(type: "integer", nullable: false),
+                    CategoryId = table.Column<int>(type: "integer", nullable: true),
                     ProductName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     Description = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
                 },
@@ -40,11 +40,10 @@ namespace WebApplication3.Migrations
                 {
                     table.PrimaryKey("Product_ID", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Product_Category",
+                        name: "FK_Products_Categories_CategoryId",
                         column: x => x.CategoryId,
                         principalTable: "Categories",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -62,7 +61,7 @@ namespace WebApplication3.Migrations
                 {
                     table.PrimaryKey("PK_Storage", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Storage_Product",
+                        name: "FK_Storages_Products_ProductId",
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
@@ -84,6 +83,12 @@ namespace WebApplication3.Migrations
                 name: "IX_Products_ProductName",
                 table: "Products",
                 column: "ProductName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Products_ProductName_CategoryId",
+                table: "Products",
+                columns: new[] { "ProductName", "CategoryId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
